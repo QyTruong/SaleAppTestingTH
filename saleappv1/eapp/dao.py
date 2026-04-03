@@ -1,5 +1,4 @@
 from sqlalchemy.exc import IntegrityError
-
 from eapp.models import Category, Product, User, Receipt, ReceiptDetails
 import hashlib
 from eapp import app, db
@@ -7,12 +6,13 @@ import cloudinary.uploader
 from flask_login import current_user
 from sqlalchemy import func
 from datetime import datetime
-
+from flask import current_app
+import re
 
 def load_categories():
     return Category.query.all()
 
-def load_products(cate_id=None, kw=None, page=1):
+def load_products(cate_id=None, kw=None, page=None):
     query = Product.query
 
     if kw:
@@ -22,8 +22,8 @@ def load_products(cate_id=None, kw=None, page=1):
         query = query.filter(Product.category_id.__eq__(cate_id))
 
     if page:
-        start = (page - 1) * app.config['PAGE_SIZE']
-        query = query.slice(start, start + app.config['PAGE_SIZE'])
+        start = (page - 1) * current_app.config['PAGE_SIZE']
+        query = query.slice(start, start + current_app.config['PAGE_SIZE'])
 
     return query.all()
 
@@ -41,6 +41,17 @@ def auth_user(username, password):
                              User.password==password).first()
 
 def add_user(name, username, password, avatar):
+    if len(username.strip()) < 5:
+        raise ValueError('Username tối thiểu 5 ký tự')
+    if len(password.strip()) < 8:
+        raise ValueError('Mật khẩu tối thiếu 8 ký tự')
+    if not re.search(r'[0-9]', password.strip()):
+        raise ValueError('Mật khẩu phải có ít nhất 1 số')
+    if not re.search(r'[a-zA-Z]', password.strip()):
+        raise ValueError('Mật khẩu phải có ít nhất 1 ký tự')
+    if User.query.filter(User.username.__eq__(username)).first():
+        raise ValueError('Tên đăng nhập này đã tồn tại, vui lòng nhập tên khác')
+
     password = str(hashlib.md5(password.strip().encode('utf-8')).hexdigest())
     u = User(name=name.strip(), username=username.strip(), password=password)
     if avatar:
