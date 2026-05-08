@@ -1,8 +1,11 @@
 import pytest
 from flask import Flask
+from selenium.webdriver.chrome.service import Service
+
 from eapp import db
 from eapp.index import register_routes
 from eapp.models import Product
+from selenium import webdriver
 
 
 def create_app():
@@ -58,3 +61,10 @@ def mock_cloudinary(monkeypatch):
 
     monkeypatch.setattr('cloudinary.uploader.upload', fake_upload)
 
+
+@pytest.fixture
+def driver():
+    service = Service(executable_path='../../.venv/chromedriver.exe')
+    driver = webdriver.Chrome(service=service)
+    yield driver
+    driver.quit()
